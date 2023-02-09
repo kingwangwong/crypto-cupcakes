@@ -12,14 +12,35 @@ const { User, Cupcake } = require('./db');
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(express.urlencoded({extended:true}));
+app.use(express.urlencoded({ extended: true }));
 
 /* *********** YOUR CODE HERE *********** */
 // follow the module instructions: destructure config environment variables from process.env
 // follow the docs:
-  // define the config object
-  // attach Auth0 OIDC auth router
-  // create a GET / route handler that sends back Logged in or Logged out
+// define the config object
+// attach Auth0 OIDC auth router
+// create a GET / route handler that sends back Logged in or Logged out
+const { auth } = require('express-openid-connect');
+const { SECRET, BASE_URL, CLIENT_ID, AUTH0_DOMAIN } = process.env;
+
+const config = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: SECRET,
+  baseURL: BASE_URL,
+  clientID: CLIENT_ID,
+  issuerBaseURL: 'https://' + AUTH0_DOMAIN
+};
+
+// auth router attaches /login, /logout, and /callback routes to the baseURL
+app.use(auth(config));
+
+// req.isAuthenticated is provided from the auth router
+app.get('/', (req, res) => {
+  res.send(req.oidc.isAuthenticated() ? 'Logged in' : 'Logged out');
+  console.log(req.oidc.user);
+});
+
 
 app.get('/cupcakes', async (req, res, next) => {
   try {
@@ -34,8 +55,8 @@ app.get('/cupcakes', async (req, res, next) => {
 // error handling middleware
 app.use((error, req, res, next) => {
   console.error('SERVER ERROR: ', error);
-  if(res.statusCode < 400) res.status(500);
-  res.send({error: error.message, name: error.name, message: error.message});
+  if (res.statusCode < 400) res.status(500);
+  res.send({ error: error.message, name: error.name, message: error.message });
 });
 
 app.listen(PORT, () => {
